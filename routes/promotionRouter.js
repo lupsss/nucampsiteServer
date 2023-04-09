@@ -1,11 +1,15 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const Promotion = require('../models/promotion')
-const promotionsRouter = express.Router();
+const promotionRouter = express.Router();
+const authenticate = require('../authenticate');
 
-promotionsRouter.use(bodyParser.json());
+const Promotion = require('../models/promotion');
 
-promotionsRouter.route('/')
+promotionRouter.route('/')
+.all((req, res, next) => {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
+    next();
+})
 .get((req, res, next) => {
     Promotion.find()
     .then(promotions => {
@@ -15,24 +19,21 @@ promotionsRouter.route('/')
     })
     .catch(err => next(err));
 })
-
-.post((req, res, next) => {
+.post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promotion.create(req.body)
     .then(promotion => {
-        console.log('Promotion Created', promotion);
+        console.log('Promotion Created ', promotion);
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         res.json(promotion);
     })
     .catch(err => next(err));
 })
-
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end('PUT operation not supported on /promotions');
 })
-
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promotion.deleteMany()
     .then(response => {
         res.statusCode = 200;
@@ -42,7 +43,12 @@ promotionsRouter.route('/')
     .catch(err => next(err));
 });
 
-promotionsRouter.route('/:promotionId')
+promotionRouter.route('/:promotionId')
+.all((req, res, next) => {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
+    next();
+})
 .get((req, res, next) => {
     Promotion.findById(req.params.promotionId)
     .then(promotion => {
@@ -52,12 +58,11 @@ promotionsRouter.route('/:promotionId')
     })
     .catch(err => next(err));
 })
-
-.post((req, res, next) => {
-    res.end(`Will add the promotion: ${req.body.name} with description: ${req.body.description}`);
+.post(authenticate.verifyUser, (req, res) => {
+    res.statusCode = 403;
+    res.end(`POST operation not supported on /promotion/${req.params.promotionId}`);
 })
-
-.put((req, res, next) => {
+.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promotion.findByIdAndUpdate(req.params.promotionId, {
         $set: req.body
     }, { new: true })
@@ -68,8 +73,7 @@ promotionsRouter.route('/:promotionId')
     })
     .catch(err => next(err));
 })
-
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promotion.findByIdAndDelete(req.params.promotionId)
     .then(response => {
         res.statusCode = 200;
@@ -79,4 +83,4 @@ promotionsRouter.route('/:promotionId')
     .catch(err => next(err));
 });
 
-module.exports = promotionsRouter;
+module.exports = promotionRouter;
